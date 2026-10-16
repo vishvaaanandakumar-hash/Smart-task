@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: 34 36 42;           /* charcoal ink used by every text-black/bg-black/border-black class in light mode */
+  --paper: 248 246 241;
+}
+.dark {
+  --ink: 232 234 240;        /* the SAME classes automatically become light ink in dark mode — no per-component overrides needed */
+  --paper: 20 22 27;
+}
+
+html { scroll-behavior: smooth; }
+body { color: rgb(var(--ink)); background-color: rgb(var(--paper)); transition: background-color .3s ease, color .3s ease; }
+
+.font-display { letter-spacing: -0.02em; }
+h1.font-display, h2.font-display { letter-spacing: -0.03em; }
+
+/* Form elements do NOT inherit color from ancestors by default — this was the dark-mode "invisible text" bug */
+input, select, textarea {
+  color: rgb(var(--ink));
+  caret-color: rgb(var(--ink));
+}
+input::placeholder, textarea::placeholder { color: rgb(var(--ink) / .4); }
+select option { color: #111; background: #fff; } /* native dropdown popovers render outside our theme, keep them legible */
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--ink) / .15); border-radius: 8px; }
+
+.card {
+  @apply bg-white dark:bg-[#181A21] border border-black/[.06] rounded-xl shadow-sm;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.card:hover { box-shadow: 0 12px 28px -12px rgb(var(--ink) / .18); }
+
+.btn-primary {
+  @apply bg-navy text-white px-5 py-2.5 rounded-lg font-medium transition-all;
+  box-shadow: 0 6px 18px -6px rgba(20,33,61,.5);
+}
+.btn-primary:hover { background: #1c2b52; transform: translateY(-1px); box-shadow: 0 10px 24px -8px rgba(20,33,61,.6); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary { @apply border border-black/10 px-5 py-2.5 rounded-lg font-medium transition-colors; }
+.btn-secondary:hover { @apply border-navy text-navy dark:text-white dark:border-white/40; }
+
+.pill { @apply text-xs font-semibold px-2.5 py-1 rounded-full; }
+
+/* subtle depth for anything explicitly opting into 3D perspective */
+.tilt-3d { transform-style: preserve-3d; will-change: transform; }
