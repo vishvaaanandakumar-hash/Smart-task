@@ -5,11 +5,11 @@ from datetime import date, datetime
 class RegisterIn(BaseModel):
     name: str
     email: EmailStr
-    password: str = Field(min_length=6, max_length=72)
+    password: str = Field(min_length=6, max_length=1024)
 
 class LoginIn(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=1024)
 
 class UserOut(BaseModel):
     id: int

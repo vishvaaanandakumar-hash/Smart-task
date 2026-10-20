@@ -14,18 +14,12 @@ def seed_demo():
             db.add(user)
             db.commit()
             db.refresh(user)
-        else:
-            user.password_hash = auth.hash_password("SmartTask123")
-            db.commit()
 
         # Seed demo user 2 (vishvaa@smarttask.app) so app credentials work seamlessly
         user2 = db.query(models.User).filter(models.User.email == "vishvaa@smarttask.app").first()
         if not user2:
             user2 = models.User(name="Vishvaa", email="vishvaa@smarttask.app", password_hash=auth.hash_password("Password123!"))
             db.add(user2)
-            db.commit()
-        else:
-            user2.password_hash = auth.hash_password("Password123!")
             db.commit()
 
         today = date.today()

@@ -37,7 +37,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env            # edit SECRET_KEY before any real deployment
+cp .env.example .env            # set SECRET_KEY to a random value of at least 32 bytes
 uvicorn app.main:app --reload
 ```
 The database (`smarttask.db`), tables, and demo account are created automatically on first run.
@@ -56,6 +56,11 @@ Frontend:  http://localhost:5173
 Backend:   http://localhost:8000
 API docs:  http://localhost:8000/docs
 ```
+
+## Deployment environment
+
+- **Render backend:** build with `pip install -r backend/requirements.txt` and start with `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`. Set `SECRET_KEY` to a random value of at least 32 bytes, `CORS_ORIGINS` to the exact Vercel site origin (comma-separated if using multiple origins), and `DATABASE_URL` to a persistent database URL for production data. If `DATABASE_URL` is omitted, the app uses local SQLite storage, which is not persistent on Render by default.
+- **Vercel frontend:** set `VITE_API_URL` to the Render backend origin, without a trailing slash (for example, `https://your-service.onrender.com`). Vite embeds this value at build time, so redeploy the frontend after changing it.
 
 ### Demo account
 ```

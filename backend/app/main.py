@@ -1,21 +1,27 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from .database import Base, engine
 from .seed import seed_demo
 from .scheduler import start_scheduler
 from .routes import auth as auth_routes, tasks, location, automations, notifications, analytics, focus
 
-load_dotenv()
 Base.metadata.create_all(bind=engine)
 seed_demo()
 
 app = FastAPI(title="SmartTask API", version="2.0.0")
 
+cors_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+if not cors_origins or "*" in cors_origins:
+    raise RuntimeError("CORS_ORIGINS must contain one or more explicit frontend origins.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]

@@ -32,14 +32,12 @@ def login(data: schemas.LoginIn, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(401, "Incorrect email or password.")
 
-    # Check password, and allow demo passwords for demo accounts
-    is_valid = auth.verify_password(data.password, user.password_hash)
-    if not is_valid and user.email.lower() in ["demo@smarttask.app", "vishvaa@smarttask.app"]:
-        if data.password in ["SmartTask123", "Password123!", "demo", "password"]:
-            is_valid = True
-
+    is_valid, updated_hash = auth.verify_password_and_update(data.password, user.password_hash)
     if not is_valid:
         raise HTTPException(401, "Incorrect email or password.")
+    if updated_hash is not None:
+        user.password_hash = updated_hash
+        db.commit()
     return {"access_token": auth.create_token(user.id), "user": user}
 
 @router.post("/demo-login", response_model=schemas.TokenOut)

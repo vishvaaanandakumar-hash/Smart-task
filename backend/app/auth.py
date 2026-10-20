@@ -7,22 +7,23 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from . import models
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
+pwd_ctx = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated=["bcrypt"])
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY or len(SECRET_KEY.encode("utf-8")) < 32:
+    raise RuntimeError("SECRET_KEY must be set to a random value of at least 32 bytes.")
 ALGORITHM = "HS256"
 EXPIRE_MIN = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-def _bcrypt_safe(password: str) -> str:
-    # bcrypt only ever uses the first 72 BYTES of a password and newer bcrypt
-    # versions raise instead of silently truncating like they used to — so we
-    # truncate ourselves first. This never weakens real-world passwords: no
-    # bcrypt implementation has ever used anything past byte 72 anyway.
-    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+def hash_password(password: str) -> str:
+    return pwd_ctx.hash(password)
 
-def hash_password(p): return pwd_ctx.hash(_bcrypt_safe(p))
-def verify_password(p, h): return pwd_ctx.verify(_bcrypt_safe(p), h)
+def verify_password(password: str, password_hash: str) -> bool:
+    return pwd_ctx.verify(password, password_hash)
+
+def verify_password_and_update(password: str, password_hash: str) -> tuple[bool, str | None]:
+    return pwd_ctx.verify_and_update(password, password_hash)
 
 def create_token(user_id: int):
     exp = datetime.datetime.utcnow() + datetime.timedelta(minutes=EXPIRE_MIN)
