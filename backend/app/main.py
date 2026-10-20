@@ -1,7 +1,8 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import Base, engine
+from .database import Base, SessionLocal, engine
+from .demo_seed import seed_demo_account
 from .migrations import remove_legacy_demo_accounts
 from .scheduler import start_scheduler
 from .routes import auth as auth_routes, tasks, location, automations, notifications, analytics, focus
@@ -37,6 +38,7 @@ app.include_router(focus.router)
 
 @app.on_event("startup")
 def startup():
+    seed_demo_account(SessionLocal, os.getenv("DEMO_ACCOUNT_PASSWORD"))
     if not os.getenv("VERCEL"):
         start_scheduler()
 

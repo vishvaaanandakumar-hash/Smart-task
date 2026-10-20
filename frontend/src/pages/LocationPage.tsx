@@ -91,6 +91,7 @@ export default function LocationPage() {
   }, []);
 
   const activePos = realPos || selectedPos;
+  const mapPos = activePos || (reminders[0] ? { lat: reminders[0].lat, lng: reminders[0].lng } : null);
 
   // Request browser Notification Permission
   async function requestNotificationPermission() {
@@ -258,7 +259,7 @@ export default function LocationPage() {
         {/* Map Container */}
         <div className="card overflow-hidden h-[540px] relative border-slate-200 dark:border-slate-800">
           <MapContainer
-            center={activePos ? [activePos.lat, activePos.lng] : [0, 0]}
+            center={mapPos ? [mapPos.lat, mapPos.lng] : [0, 0]}
             zoom={15}
             style={{ height: "100%", width: "100%" }}
           >
@@ -267,7 +268,7 @@ export default function LocationPage() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {activePos && <MapRecenter coords={[activePos.lat, activePos.lng]} />}
+            {mapPos && <MapRecenter coords={[mapPos.lat, mapPos.lng]} />}
 
             {activePos && (
               <Marker position={[activePos.lat, activePos.lng]} icon={userIcon}>

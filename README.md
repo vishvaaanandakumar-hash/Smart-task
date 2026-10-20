@@ -40,7 +40,7 @@ pip install -r requirements.txt
 cp .env.example .env            # set SECRET_KEY to a random value of at least 32 bytes
 uvicorn app.main:app --reload
 ```
-The database (`smarttask.db`) and tables are created automatically on first run. The app does not create demo users or sample user data. On startup, a one-time migration removes the previous public demo accounts and their associated data while leaving other accounts untouched.
+The database (`smarttask.db`) and tables are created automatically on first run. A one-time migration removes the previous public demo accounts and their associated data while leaving other accounts untouched. To enable the professor presentation account, set `DEMO_ACCOUNT_PASSWORD` before starting the backend; the account and fictional sample dataset are created once and are not reset on later starts.
 
 ### Frontend
 Open a second terminal:
@@ -60,6 +60,7 @@ API docs:  http://localhost:8000/docs
 ## Deployment environment
 
 - **Render backend:** build with `pip install -r backend/requirements.txt` and start with `uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT`. Set `SECRET_KEY` to a random value of at least 32 bytes, `CORS_ORIGINS` to the exact Vercel site origin (comma-separated if using multiple origins), and `DATABASE_URL` to a persistent database URL for production data. If `DATABASE_URL` is omitted, the app uses local SQLite storage, which is not persistent on Render by default.
+- To seed the public professor demo account on Render, add `DEMO_ACCOUNT_PASSWORD` as a secret environment variable and set it to the password you want the demo account to use. The demo login email is `vishvaa@gmail.com`. This is a shared public account containing fictional data; anyone with its credentials can change that data. The account is created once and later deploys will not restore edited or deleted sample records.
 - **Vercel frontend:** set `VITE_API_URL` to the Render backend origin, without a trailing slash (for example, `https://your-service.onrender.com`). Vite embeds this value at build time, so redeploy the frontend after changing it.
 
 ---
