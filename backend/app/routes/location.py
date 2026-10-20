@@ -1,6 +1,6 @@
 import math, httpx
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import models, schemas, auth
 from ..database import get_db
@@ -29,18 +29,6 @@ CATEGORY_TAGS = {
     "Hospital": '"amenity"="hospital"',
 }
 
-# Standard curated places for robust offline/demo fallbacks
-FALLBACK_PLACES = [
-    {"name": "Reliance Fresh Supermarket", "category": "Supermarket", "lat": 13.0072, "lng": 80.1192, "address": "Grand Trunk Rd, Chennai"},
-    {"name": "Nilgiris Supermarket", "category": "Supermarket", "lat": 13.0085, "lng": 80.1170, "address": "Market Complex, Chennai"},
-    {"name": "Apollo Pharmacy 24/7", "category": "Pharmacy", "lat": 13.0055, "lng": 80.1180, "address": "Hospital Road, Chennai"},
-    {"name": "MedPlus Chemist", "category": "Pharmacy", "lat": 13.0090, "lng": 80.1195, "address": "Corner Avenue, Chennai"},
-    {"name": "University Campus & Library", "category": "College", "lat": 13.0040, "lng": 80.1165, "address": "Academic Block A, Chennai"},
-    {"name": "Gold's Fitness Gym", "category": "Gym", "lat": 13.0078, "lng": 80.1205, "address": "Fitness Hub, Chennai"},
-    {"name": "Starbucks Coffee & Cafe", "category": "Cafe", "lat": 13.0062, "lng": 80.1201, "address": "Central Plaza, Chennai"},
-    {"name": "Express Avenue Shopping Mall", "category": "Shopping mall", "lat": 13.0105, "lng": 80.1150, "address": "Express Way, Chennai"},
-]
-
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000  # meters
     p1, p2 = math.radians(lat1), math.radians(lat2)
@@ -50,10 +38,8 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 @router.get("/search")
-async def search_places(query: str, lat: float = 13.0067, lng: float = 80.1187):
-    """
-    Search places by text query using OpenStreetMap Nominatim with local fallback.
-    """
+async def search_places(query: str, lat: float | None = None, lng: float | None = None):
+    """Search for places by text query using OpenStreetMap Nominatim."""
     results = []
     try:
         url = "https://nominatim.openstreetmap.org/search"
@@ -66,36 +52,25 @@ async def search_places(query: str, lat: float = 13.0067, lng: float = 80.1187):
                 for item in data:
                     plat = float(item["lat"])
                     plng = float(item["lon"])
-                    results.append({
+                    result = {
                         "name": item.get("display_name", "").split(",")[0],
                         "address": item.get("display_name", ""),
                         "lat": plat,
                         "lng": plng,
-                        "distance_m": round(haversine(lat, lng, plat, plng)),
-                    })
+                    }
+                    if lat is not None and lng is not None:
+                        result["distance_m"] = round(haversine(lat, lng, plat, plng))
+                    results.append(result)
     except Exception:
         pass
 
-    # Merge matched fallback places
-    q_lower = query.lower()
-    for fp in FALLBACK_PLACES:
-        if q_lower in fp["name"].lower() or q_lower in fp["category"].lower():
-            dist = round(haversine(lat, lng, fp["lat"], fp["lng"]))
-            if not any(r["name"] == fp["name"] for r in results):
-                results.append({
-                    "name": fp["name"],
-                    "address": fp["address"],
-                    "lat": fp["lat"],
-                    "lng": fp["lng"],
-                    "distance_m": dist,
-                })
-
-    results.sort(key=lambda x: x["distance_m"])
+    if lat is not None and lng is not None:
+        results.sort(key=lambda result: result["distance_m"])
     return {"query": query, "results": results[:12]}
 
 @router.get("/nearby")
 async def nearby(lat: float, lng: float, category: str = "Supermarket", radius: int = 2000):
-    """Real Overpass API lookup for places of a category near coordinates, with fallback."""
+    """Look up real places of a category near coordinates using OpenStreetMap."""
     tag = CATEGORY_TAGS.get(category, CATEGORY_TAGS["Supermarket"])
     query = f"""
     [out:json][timeout:10];
@@ -126,19 +101,6 @@ async def nearby(lat: float, lng: float, category: str = "Supermarket", radius: 
                 "address": el.get("tags", {}).get("addr:street", f"Near {name}"),
                 "distance_m": round(haversine(lat, lng, plat, plng))
             })
-
-    # If Overpass returned few or zero places, supplement with curated places
-    if len(places) < 2:
-        for fp in FALLBACK_PLACES:
-            if fp["category"].lower() == category.lower() or category == "All":
-                dist = round(haversine(lat, lng, fp["lat"], fp["lng"]))
-                places.append({
-                    "name": fp["name"],
-                    "lat": fp["lat"],
-                    "lng": fp["lng"],
-                    "address": fp["address"],
-                    "distance_m": dist,
-                })
 
     places.sort(key=lambda p: p["distance_m"])
     return {"category": category, "count": len(places), "places": places[:20]}

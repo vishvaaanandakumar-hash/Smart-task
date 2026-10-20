@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Circle, Popup, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,14 +7,7 @@ import {
   Navigation,
   Search,
   Bell,
-  CheckCircle2,
-  AlertTriangle,
-  RotateCcw,
-  Sliders,
   Compass,
-  Play,
-  Layers,
-  Sparkles
 } from "lucide-react";
 import { api } from "../api";
 import RadarBeacon3D from "../components/RadarBeacon3D";
@@ -62,28 +55,16 @@ function MapRecenter({ coords }: { coords: [number, number] }) {
   return null;
 }
 
-function ClickToMove({ onMove }: { onMove: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onMove(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
 export default function LocationPage() {
   const [reminders, setReminders] = useState<any[]>([]);
   const [realPos, setRealPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [simPos, setSimPos] = useState<{ lat: number; lng: number }>({ lat: 13.0067, lng: 80.1187 });
+  const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number } | null>(null);
   const [isRealMonitoring, setIsRealMonitoring] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("Supermarket");
-  const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([]);
-  const [notificationLog, setNotificationLog] = useState<any[]>([]);
   const [geofenceReport, setGeofenceReport] = useState<any[]>([]);
-  const [simulatorStatus, setSimulatorStatus] = useState<string>("Ready. Pick a simulated preset below or click on the map.");
+  const [locationStatus, setLocationStatus] = useState("Enable GPS tracking or search for a place to set a location.");
   const [notificationPermission, setNotificationPermission] = useState<string>(
     typeof Notification !== "undefined" ? Notification.permission : "unsupported"
   );
@@ -102,9 +83,14 @@ export default function LocationPage() {
     if (typeof Notification !== "undefined") {
       setNotificationPermission(Notification.permission);
     }
+    return () => {
+      if (watchId.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId.current);
+      }
+    };
   }, []);
 
-  const activePos = realPos || simPos;
+  const activePos = realPos || selectedPos;
 
   // Request browser Notification Permission
   async function requestNotificationPermission() {
@@ -129,26 +115,24 @@ export default function LocationPage() {
       }
       setIsRealMonitoring(false);
       setRealPos(null);
-      setSimulatorStatus("Real GPS monitoring stopped.");
+      setLocationStatus("Real GPS monitoring stopped.");
     } else {
       if (!navigator.geolocation) {
         alert("Geolocation is not supported by your browser.");
         return;
       }
-      setSimulatorStatus("Acquiring high-accuracy GPS fix...");
+      setLocationStatus("Acquiring high-accuracy GPS fix...");
       watchId.current = navigator.geolocation.watchPosition(
         async (position) => {
           const { latitude, longitude, accuracy } = position.coords;
           setRealPos({ lat: latitude, lng: longitude });
           setIsRealMonitoring(true);
-          setSimulatorStatus(`🟢 GPS Active (±${Math.round(accuracy)}m accuracy)`);
-          
-          // Feed coordinates to geofence engine
-          await processGeofenceCheck(latitude, longitude, "Real GPS");
+          setLocationStatus(`GPS active (±${Math.round(accuracy)}m accuracy)`);
+          await processGeofenceCheck(latitude, longitude);
         },
         (error) => {
           setIsRealMonitoring(false);
-          setSimulatorStatus(`🔴 Location error: ${error.message}`);
+          setLocationStatus(`Location error: ${error.message}`);
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
       );
@@ -156,22 +140,14 @@ export default function LocationPage() {
   }
 
   // Core Geofence Check Execution
-  async function processGeofenceCheck(lat: number, lng: number, sourceLabel: string) {
+  async function processGeofenceCheck(lat: number, lng: number) {
     try {
       const res = await api.checkGeofence(lat, lng);
       setGeofenceReport(res.reminders || []);
 
       if (res.triggered && res.triggered.length > 0) {
         const trigger = res.triggered[0];
-        const newMsg = `🚨 ${trigger.message} (${trigger.distance_m}m away)`;
-        
-        // Add to log
-        setNotificationLog((prev) => [
-          { id: Date.now(), msg: trigger.message, time: new Date().toLocaleTimeString(), source: sourceLabel },
-          ...prev.slice(0, 7),
-        ]);
-
-        setSimulatorStatus(`🔔 ENTER GEOFENCE DETECTED! Notification triggered for "${trigger.label}"`);
+        setLocationStatus(`Geofence entered. Notification sent for "${trigger.label}".`);
 
         // Trigger Real Browser Notification
         if ("Notification" in window && Notification.permission === "granted") {
@@ -186,31 +162,14 @@ export default function LocationPage() {
       } else {
         const anyInside = res.reminders?.some((r: any) => r.is_inside);
         if (anyInside) {
-          setSimulatorStatus("📍 Currently inside geofence — duplicate notifications safely suppressed.");
+          setLocationStatus("Currently inside a geofence; duplicate notifications are suppressed.");
         } else {
-          setSimulatorStatus(`Coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)}) checked — outside all geofences.`);
+          setLocationStatus(`Coordinates (${lat.toFixed(4)}, ${lng.toFixed(4)}) checked; outside all geofences.`);
         }
       }
     } catch (e: any) {
-      setSimulatorStatus(`Error checking geofence: ${e.message}`);
+      setLocationStatus(`Error checking geofence: ${e.message}`);
     }
-  }
-
-  // Simulator Step Movement
-  async function simulateMoveTo(targetLat: number, targetLng: number, locationName: string) {
-    setSimulatorStatus(`Simulating travel towards ${locationName}...`);
-    const steps = 6;
-    const startLat = simPos.lat;
-    const startLng = simPos.lng;
-
-    for (let i = 1; i <= steps; i++) {
-      await new Promise((r) => setTimeout(r, 160));
-      const curLat = startLat + (targetLat - startLat) * (i / steps);
-      const curLng = startLng + (targetLng - startLng) * (i / steps);
-      setSimPos({ lat: curLat, lng: curLng });
-    }
-
-    await processGeofenceCheck(targetLat, targetLng, `Simulator: ${locationName}`);
   }
 
   // Search Places using Nominatim
@@ -219,21 +178,14 @@ export default function LocationPage() {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
-      const res = await api.searchPlaces(searchQuery, activePos.lat, activePos.lng);
+      const res = await api.searchPlaces(searchQuery, activePos?.lat, activePos?.lng);
       setSearchResults(res.results || []);
-    } catch {}
+    } catch (e: any) {
+      setLocationStatus(`Place search failed: ${e.message}`);
+    }
     finally {
       setIsSearching(false);
     }
-  }
-
-  // Category Quick Search using Overpass
-  async function handleCategorySearch(cat: string) {
-    setSelectedCategory(cat);
-    try {
-      const res = await api.nearby(activePos.lat, activePos.lng, cat, 2500);
-      setNearbyPlaces(res.places || []);
-    } catch {}
   }
 
   return (
@@ -286,7 +238,7 @@ export default function LocationPage() {
               Live Geofence Radar Status
             </div>
             <div className="text-sm font-medium text-slate-800 dark:text-slate-200 mt-0.5">
-              {simulatorStatus}
+              {locationStatus}
             </div>
           </div>
         </div>
@@ -296,17 +248,17 @@ export default function LocationPage() {
             Active Geofences: <strong className="text-slate-800 dark:text-slate-200">{reminders.filter(r => r.status !== "disabled").length}</strong>
           </div>
           <div>
-            Coordinates: <strong className="text-slate-800 dark:text-slate-200">{activePos.lat.toFixed(4)}, {activePos.lng.toFixed(4)}</strong>
+            Coordinates: <strong className="text-slate-800 dark:text-slate-200">{activePos ? `${activePos.lat.toFixed(4)}, ${activePos.lng.toFixed(4)}` : "Not set"}</strong>
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Interactive Map + Simulator Controls */}
+      {/* Main Grid: Interactive Map + Location Search */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
         {/* Map Container */}
         <div className="card overflow-hidden h-[540px] relative border-slate-200 dark:border-slate-800">
           <MapContainer
-            center={[activePos.lat, activePos.lng]}
+            center={activePos ? [activePos.lat, activePos.lng] : [0, 0]}
             zoom={15}
             style={{ height: "100%", width: "100%" }}
           >
@@ -315,23 +267,19 @@ export default function LocationPage() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            <MapRecenter coords={[activePos.lat, activePos.lng]} />
-            <ClickToMove onMove={(lat, lng) => {
-              setSimPos({ lat, lng });
-              processGeofenceCheck(lat, lng, "Map Click");
-            }} />
+            {activePos && <MapRecenter coords={[activePos.lat, activePos.lng]} />}
 
-            {/* User / Simulator Marker */}
-            <Marker position={[activePos.lat, activePos.lng]} icon={userIcon}>
-              <Popup>
-                <div className="text-xs space-y-1">
-                  <strong>You are here</strong>
-                  <div>Lat: {activePos.lat.toFixed(4)}</div>
-                  <div>Lng: {activePos.lng.toFixed(4)}</div>
-                  <div className="text-[10px] text-slate-400">Click anywhere to reposition</div>
-                </div>
-              </Popup>
-            </Marker>
+            {activePos && (
+              <Marker position={[activePos.lat, activePos.lng]} icon={userIcon}>
+                <Popup>
+                  <div className="text-xs space-y-1">
+                    <strong>{realPos ? "Your current location" : "Selected place"}</strong>
+                    <div>Lat: {activePos.lat.toFixed(4)}</div>
+                    <div>Lng: {activePos.lng.toFixed(4)}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
 
             {/* Saved Reminder Geofences */}
             {reminders.map((r) => {
@@ -379,66 +327,8 @@ export default function LocationPage() {
           </div>
         </div>
 
-        {/* Sidebar Controls: Simulator & Nearby POI */}
+        {/* Location Search */}
         <div className="space-y-5">
-          {/* ⭐ DEMO LOCATION SIMULATOR CARD */}
-          <div className="card p-5 border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-b from-white to-indigo-50/20 dark:from-[#111827] dark:to-indigo-950/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 tracking-wide uppercase">
-                Demo Simulator
-              </span>
-              <Sparkles size={14} className="text-indigo-500" />
-            </div>
-
-            <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
-              Geofence Travel Simulator
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 mb-4 leading-relaxed">
-              Test real geofencing by simulating movement. Stepping inside a 200m radius will trigger the actual notification pipeline.
-            </p>
-
-            <div className="space-y-2">
-              <button
-                onClick={() => simulateMoveTo(13.0067, 80.1187, "Reliance Fresh Supermarket")}
-                className="w-full text-left p-3 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-white dark:bg-slate-800/80 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all flex items-center justify-between group"
-              >
-                <div>
-                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">
-                    🛒 Enter Supermarket (Inside 200m)
-                  </div>
-                  <div className="text-[10px] text-slate-400">Triggers: "Buy Milk & Groceries"</div>
-                </div>
-                <Play size={14} className="text-indigo-500 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-
-              <button
-                onClick={() => simulateMoveTo(13.0078, 80.1205, "Gold's Fitness Gym")}
-                className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all flex items-center justify-between group"
-              >
-                <div>
-                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600">
-                    🏋️ Enter Gym (Inside 250m)
-                  </div>
-                  <div className="text-[10px] text-slate-400">Triggers: "Fitness Gym Workout"</div>
-                </div>
-                <Play size={14} className="text-indigo-500 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-
-              <button
-                onClick={() => simulateMoveTo(12.9900, 80.1000, "Home (1.5 km Away)")}
-                className="w-full text-left p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-between group"
-              >
-                <div>
-                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    🏠 Move to Home (Outside all geofences)
-                  </div>
-                  <div className="text-[10px] text-slate-400">Re-arms all monitoring geofences</div>
-                </div>
-                <RotateCcw size={14} className="text-slate-400 group-hover:rotate-45 transition-transform" />
-              </button>
-            </div>
-          </div>
-
           {/* Location Search & Places */}
           <div className="card p-5 space-y-4">
             <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -468,8 +358,8 @@ export default function LocationPage() {
                   <div
                     key={idx}
                     onClick={() => {
-                      setSimPos({ lat: p.lat, lng: p.lng });
-                      processGeofenceCheck(p.lat, p.lng, `Picked: ${p.name}`);
+                      setSelectedPos({ lat: p.lat, lng: p.lng });
+                      setLocationStatus(`${p.name} selected. Enable GPS tracking to check geofences at your live location.`);
                     }}
                     className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/70 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer text-xs transition-colors"
                   >
@@ -480,24 +370,6 @@ export default function LocationPage() {
               </div>
             )}
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="text-xs font-semibold text-slate-500 mb-2">Category Quick Filter:</div>
-              <div className="flex flex-wrap gap-1.5">
-                {["Supermarket", "Pharmacy", "College", "Gym", "Shopping mall"].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategorySearch(cat)}
-                    className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                      selectedCategory === cat
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </div>

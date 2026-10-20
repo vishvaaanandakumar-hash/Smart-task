@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default function Register() {
-  const { register, demoLogin } = useAuth();
+  const { register } = useAuth();
   const nav = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -12,7 +12,6 @@ export default function Register() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,19 +35,6 @@ export default function Register() {
     }
   }
 
-  async function handleInstantDemo() {
-    setError("");
-    setDemoLoading(true);
-    try {
-      await demoLogin();
-      nav("/app");
-    } catch (err: any) {
-      setError(err.message || "Demo login failed.");
-    } finally {
-      setDemoLoading(false);
-    }
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-offwhite dark:bg-[#0B0F19] px-4 py-8">
       <div className="card p-8 w-full max-w-md shadow-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0F172A]">
@@ -61,24 +47,6 @@ export default function Register() {
           </Link>
           <h1 className="font-display text-2xl font-bold text-slate-900 dark:text-white">Create Account</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Start organizing your productivity today</p>
-        </div>
-
-        {/* Instant Demo Shortcut */}
-        <button
-          type="button"
-          onClick={handleInstantDemo}
-          disabled={demoLoading || loading}
-          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all mb-4"
-        >
-          <Sparkles size={15} className="text-amber-300" />
-          <span>⚡ Skip signup — Instant Demo Access</span>
-          <ArrowRight size={13} />
-        </button>
-
-        <div className="flex items-center gap-3 my-3">
-          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">or create account</span>
-          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
         </div>
 
         {error && (

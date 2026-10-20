@@ -57,7 +57,7 @@ export default function CommandMenu({ open, onClose, onOpenNewTask }: Props) {
       run: () => { onClose(); navigate("/app/calendar"); }
     },
     {
-      label: "Open Location Reminders & Simulator",
+      label: "Open Location Reminders",
       icon: MapPin,
       category: "Navigation",
       run: () => { onClose(); navigate("/app/location"); }
@@ -81,7 +81,7 @@ export default function CommandMenu({ open, onClose, onOpenNewTask }: Props) {
       run: () => { onClose(); navigate("/app/analytics"); }
     },
     {
-      label: "Settings & Reset Demo Data",
+      label: "Settings & Export Backup",
       icon: Settings,
       category: "Navigation",
       run: () => { onClose(); navigate("/app/settings"); }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Play, Plus, Trash2, CheckCircle2, Bell, AlertTriangle, ArrowRight, Sparkles } from "lucide-react";
+import { Zap, Plus, Trash2, Bell, AlertTriangle, ArrowRight, Sparkles } from "lucide-react";
 import { api } from "../api";
 
 export default function Automations() {
@@ -8,7 +8,6 @@ export default function Automations() {
   const [trigger, setTrigger] = useState("Task reaches deadline");
   const [condition, setCondition] = useState("Task is incomplete");
   const [action, setAction] = useState("Send notification");
-  const [testResult, setTestResult] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -26,15 +25,6 @@ export default function Automations() {
       enabled: true,
     });
     load();
-  }
-
-  function handleTestRule(a: any) {
-    setTestResult(null);
-    setTimeout(() => {
-      setTestResult(
-        `✓ Rule simulated successfully: Evaluated condition "${a.condition}" on active tasks. Action executed: "${a.action_type}".`
-      );
-    }, 400);
   }
 
   return (
@@ -122,13 +112,6 @@ export default function Automations() {
         </form>
       </div>
 
-      {testResult && (
-        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-medium flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0" />
-          <span>{testResult}</span>
-        </div>
-      )}
-
       {/* Rules List */}
       <div className="space-y-3">
         <h3 className="font-display font-bold text-base text-slate-900 dark:text-white">
@@ -162,14 +145,6 @@ export default function Automations() {
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => handleTestRule(a)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 flex items-center gap-1 transition-colors"
-                title="Test rule execution"
-              >
-                <Play size={12} /> Test Rule
-              </button>
-
               <button
                 onClick={async () => {
                   await api.deleteAutomation(a.id);

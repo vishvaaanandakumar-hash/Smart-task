@@ -60,8 +60,8 @@ export default function Tasks() {
   const [locLabel, setLocLabel] = useState("");
   const [locCategory, setLocCategory] = useState("Supermarket");
   const [locAddress, setLocAddress] = useState("");
-  const [locLat, setLocLat] = useState(13.0067);
-  const [locLng, setLocLng] = useState(80.1187);
+  const [locLat, setLocLat] = useState<number | "">("");
+  const [locLng, setLocLng] = useState<number | "">("");
   const [locRadius, setLocRadius] = useState(200);
 
   async function loadTasks() {
@@ -92,8 +92,8 @@ export default function Tasks() {
     setLocLabel("");
     setLocCategory("Supermarket");
     setLocAddress("");
-    setLocLat(13.0067);
-    setLocLng(80.1187);
+    setLocLat("");
+    setLocLng("");
     setLocRadius(200);
     setModal(true);
   }
@@ -125,8 +125,8 @@ export default function Tasks() {
       setLocLabel(t.location.label || "");
       setLocCategory(t.location.category || "Supermarket");
       setLocAddress(t.location.address || "");
-      setLocLat(t.location.lat || 13.0067);
-      setLocLng(t.location.lng || 80.1187);
+      setLocLat(t.location.lat ?? "");
+      setLocLng(t.location.lng ?? "");
       setLocRadius(t.location.radius_m || 200);
     } else {
       setUseLocation(false);
@@ -135,9 +135,28 @@ export default function Tasks() {
     setModal(true);
   }
 
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setLocLat(coords.latitude);
+        setLocLng(coords.longitude);
+      },
+      (error) => alert(`Unable to get your location: ${error.message}`),
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!formTitle.trim()) return;
+    if (useLocation && (locLat === "" || locLng === "")) {
+      alert("Enter the location coordinates or use your current location.");
+      return;
+    }
 
     const payload: any = {
       title: formTitle,
@@ -171,6 +190,7 @@ export default function Tasks() {
       } else {
         await api.createTask(payload);
       }
+
       setModal(false);
       loadTasks();
     } catch (e: any) {
@@ -727,6 +747,15 @@ export default function Tasks() {
 
                 {useLocation && (
                   <div className="space-y-3 pt-2">
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={useCurrentLocation}
+                        className="btn-secondary text-xs py-1.5 px-3"
+                      >
+                        Use my current location
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Place Name</label>
@@ -764,8 +793,9 @@ export default function Tasks() {
                         <input
                           type="number"
                           step="0.0001"
+                          required
                           value={locLat}
-                          onChange={(e) => setLocLat(Number(e.target.value))}
+                          onChange={(e) => setLocLat(e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
                         />
                       </div>
@@ -774,8 +804,9 @@ export default function Tasks() {
                         <input
                           type="number"
                           step="0.0001"
+                          required
                           value={locLng}
-                          onChange={(e) => setLocLng(Number(e.target.value))}
+                          onChange={(e) => setLocLng(e.target.value === "" ? "" : Number(e.target.value))}
                           className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-xs"
                         />
                       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Bell, MapPin, Moon, Sun, RotateCcw, Download, Shield, Sparkles, CheckCircle2 } from "lucide-react";
+import { User, Bell, MapPin, Moon, Sun, Download, Shield } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
 
@@ -12,8 +12,6 @@ export default function SettingsPage() {
   const [dark, setDark] = useState<boolean>(
     document.documentElement.classList.contains("dark")
   );
-  const [resetMsg, setResetMsg] = useState<string | null>(null);
-
   useEffect(() => {
     if (typeof Notification !== "undefined") {
       setNotifPerm(Notification.permission);
@@ -62,18 +60,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleResetDemo() {
-    if (confirm("Reset your workspace to fresh student demo data? This will restore sample tasks and geofences.")) {
-      try {
-        await api.resetDemoData();
-        setResetMsg("✓ Demo dataset freshly restored with academic tasks & geofences!");
-        setTimeout(() => setResetMsg(null), 4000);
-      } catch (e: any) {
-        alert("Error resetting data: " + e.message);
-      }
-    }
-  }
-
   async function exportData() {
     try {
       const [tasks, reminders, automations] = await Promise.all([
@@ -102,21 +88,14 @@ export default function SettingsPage() {
           Application Settings & Diagnostics
         </h1>
         <p className="text-slate-500 text-sm mt-0.5">
-          Configure notifications, device permissions, visual theme, and demo data state.
+          Configure notifications, device permissions, and visual theme.
         </p>
       </div>
-
-      {resetMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0" />
-          <span>{resetMsg}</span>
-        </div>
-      )}
 
       {/* User Profile Card */}
       <div className="card p-5 space-y-3">
         <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-          <User size={16} className="text-indigo-600" /> User Profile & Demonstration Account
+          <User size={16} className="text-indigo-600" /> User Profile
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -187,9 +166,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-              Demo Simulator also available
-            </span>
           </div>
         </div>
       </div>
@@ -221,31 +197,17 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Demo Data Management */}
-      <div className="card p-5 space-y-4 border-indigo-100 dark:border-indigo-950">
-        <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-          <RotateCcw size={16} className="text-indigo-600" /> Demo Dataset & College Presentation Utilities
-        </h3>
-
-        <p className="text-xs text-slate-500">
-          Reset all task tables, location geofences, automations, and focus logs to the curated academic demo dataset for presentations.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          <button
-            onClick={handleResetDemo}
-            className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 flex items-center gap-1.5 shadow-sm"
-          >
-            <Sparkles size={14} /> Restore Presentation Demo Dataset
-          </button>
-
-          <button
-            onClick={exportData}
-            className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5"
-          >
-            <Download size={14} /> Export Backup (JSON)
-          </button>
+      <div className="card p-5 flex items-center justify-between gap-4">
+        <div>
+          <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white">Data Backup</h3>
+          <p className="text-xs text-slate-500 mt-1">Download a JSON backup of your tasks, reminders, and automations.</p>
         </div>
+        <button
+          onClick={exportData}
+          className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5 flex-shrink-0"
+        >
+          <Download size={14} /> Export Backup
+        </button>
       </div>
     </div>
   );

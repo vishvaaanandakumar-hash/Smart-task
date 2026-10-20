@@ -219,7 +219,7 @@ def smart_breakdown(data: dict):
             {"id": "sub_3", "title": "Implement core backend API endpoints", "completed": False},
             {"id": "sub_4", "title": "Build interactive frontend screens and state", "completed": False},
             {"id": "sub_5", "title": "Run integration tests and bug fixes", "completed": False},
-            {"id": "sub_6", "title": "Package build and prepare demo walkthrough", "completed": False},
+            {"id": "sub_6", "title": "Package build and prepare release walkthrough", "completed": False},
         ]
     elif any(k in t_lower for k in ["exam", "study", "revision", "test", "midterm"]):
         subtasks = [

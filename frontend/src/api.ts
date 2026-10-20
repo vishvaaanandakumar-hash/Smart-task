@@ -25,9 +25,7 @@ export const api = {
     req("/auth/register", { method: "POST", body: JSON.stringify({ name, email, password }) }),
   login: (email: string, password: string) =>
     req("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  demoLogin: () => req("/auth/demo-login", { method: "POST" }),
   me: () => req("/auth/me"),
-  resetDemoData: () => req("/auth/reset-demo", { method: "POST" }),
 
   listTasks: (includeArchived = false) => req(`/tasks?include_archived=${includeArchived}`),
   createTask: (data: any) => req("/tasks", { method: "POST", body: JSON.stringify(data) }),
@@ -39,8 +37,14 @@ export const api = {
   breakdownTask: (title: string, category = "General") =>
     req("/tasks/breakdown", { method: "POST", body: JSON.stringify({ title, category }) }),
 
-  searchPlaces: (query: string, lat = 13.0067, lng = 80.1187) =>
-    req(`/location/search?query=${encodeURIComponent(query)}&lat=${lat}&lng=${lng}`),
+  searchPlaces: (query: string, lat?: number, lng?: number) => {
+    const params = new URLSearchParams({ query });
+    if (lat !== undefined && lng !== undefined) {
+      params.set("lat", String(lat));
+      params.set("lng", String(lng));
+    }
+    return req(`/location/search?${params.toString()}`);
+  },
   nearby: (lat: number, lng: number, category: string, radius = 2000) =>
     req(`/location/nearby?lat=${lat}&lng=${lng}&category=${encodeURIComponent(category)}&radius=${radius}`),
   listLocationReminders: () => req("/location/reminders"),

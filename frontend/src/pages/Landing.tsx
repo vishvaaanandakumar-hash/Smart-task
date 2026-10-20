@@ -1,31 +1,12 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Bell, CheckCircle2, Zap, BarChart3, Sparkles, ArrowRight } from "lucide-react";
+import { MapPin, CheckCircle2, Zap, BarChart3, Sparkles, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Hero3D from "../components/Hero3D";
 import TiltCard from "../components/TiltCard";
 
 export default function Landing() {
-  const { demoLogin, user } = useAuth();
-  const nav = useNavigate();
-  const [demoLoading, setDemoLoading] = useState(false);
-
-  async function handleInstantDemo(destination = "/app") {
-    if (user) {
-      nav(destination);
-      return;
-    }
-    setDemoLoading(true);
-    try {
-      await demoLogin();
-      nav(destination);
-    } catch {
-      nav("/login");
-    } finally {
-      setDemoLoading(false);
-    }
-  }
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-offwhite dark:bg-[#0B0F19] text-slate-800 dark:text-slate-100 overflow-hidden">
@@ -38,17 +19,14 @@ export default function Landing() {
           <span className="font-display font-bold text-lg text-navy dark:text-white">SmartTask</span>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => handleInstantDemo("/app")}
-            disabled={demoLoading}
-            className="px-3.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-semibold hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
-          >
-            <Sparkles size={13} />
-            <span>⚡ Try Demo</span>
-          </button>
-          <Link to="/login" className="btn-secondary text-xs py-1.5 px-3.5">
-            Sign in
+          <Link to={user ? "/app" : "/register"} className="btn-primary text-xs py-1.5 px-3.5">
+            {user ? "Open workspace" : "Create account"}
           </Link>
+          {!user && (
+            <Link to="/login" className="btn-secondary text-xs py-1.5 px-3.5">
+              Sign in
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -66,35 +44,17 @@ export default function Landing() {
             SmartTask combines academic tasks, automatic deadline actions, focus mode and location-aware geofence alerts into one unified workspace.
           </p>
           <div className="flex flex-wrap items-center gap-3 mt-7">
-            <button
-              onClick={() => handleInstantDemo("/app")}
-              disabled={demoLoading}
-              className="btn-primary flex items-center gap-2 py-3 px-5 text-sm font-semibold shadow-lg shadow-indigo-600/20"
-            >
-              {demoLoading ? "Launching..." : (
-                <>
-                  <Sparkles size={16} className="text-amber-300" />
-                  <span>⚡ Instant Live Demo</span>
-                  <ArrowRight size={15} />
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => handleInstantDemo("/app/location")}
-              className="btn-secondary flex items-center gap-1.5 py-3 px-4 text-sm font-medium"
-            >
+            <Link to={user ? "/app" : "/register"} className="btn-primary flex items-center gap-2 py-3 px-5 text-sm font-semibold shadow-lg shadow-indigo-600/20">
+              <span>{user ? "Open workspace" : "Get started"}</span>
+              <ArrowRight size={15} />
+            </Link>
+            <Link to={user ? "/app/location" : "/login"} className="btn-secondary flex items-center gap-1.5 py-3 px-4 text-sm font-medium">
               <MapPin size={15} className="text-indigo-500" />
               <span>Location Radar</span>
-            </button>
+            </Link>
             <Link to="/login" className="px-4 py-3 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors">
               Sign In with Email →
             </Link>
-          </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-black/40 dark:text-slate-400">
-            <span>Demo credentials:</span>
-            <code className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-indigo-600 dark:text-indigo-300 font-mono">
-              demo@smarttask.app / SmartTask123
-            </code>
           </div>
         </motion.div>
 
@@ -102,11 +62,6 @@ export default function Landing() {
           <div className="h-80 md:h-[26rem]" style={{ filter: "drop-shadow(0 25px 40px rgba(20,33,61,.18))" }}>
             <Hero3D />
           </div>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1 }}
-            className="card p-3 flex items-center gap-2 text-sm absolute bottom-2 left-1/2 -translate-x-1/2 w-64 shadow-lg border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
-            <Bell size={15} className="text-indigo flex-shrink-0 animate-bounce" />
-            <span className="text-xs font-medium">You're near a supermarket — don't forget the milk!</span>
-          </motion.div>
         </motion.div>
       </section>
 

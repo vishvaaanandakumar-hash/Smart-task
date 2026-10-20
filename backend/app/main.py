@@ -2,12 +2,12 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
-from .seed import seed_demo
+from .migrations import remove_legacy_demo_accounts
 from .scheduler import start_scheduler
 from .routes import auth as auth_routes, tasks, location, automations, notifications, analytics, focus
 
 Base.metadata.create_all(bind=engine)
-seed_demo()
+remove_legacy_demo_accounts(engine)
 
 app = FastAPI(title="SmartTask API", version="2.0.0")
 
